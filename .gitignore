@@ -1,0 +1,9 @@
+*.txt
+*.eps
+*.dat
+*.o
+*.pyc
+*.swp
+INPUT
+test
+*.so
