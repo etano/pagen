@@ -1,6 +1,6 @@
 import sys
-from math import *
-from numpy import *
+from math import pi, sqrt
+from numpy import linspace, logspace
 import subprocess
 
 def GetUnique(a):
