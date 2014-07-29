@@ -54,13 +54,13 @@ L = 10.0 # length of box
 r0 = 0.01 # first grid point
 rMax = L/2. # last grid point
 nGrid = 400 # number of grid points
-nMax = 10 # index of k cutoff for ewald
+nMax = 20 # index of k cutoff for ewald
 rCut = 5.0 # r cutoff for ewald
 breakupType = 1 # 2 - Short-ranged only, 1 - Optimized breakup, 0 - Classical Ewald breakup
-breakupObject = 1 # 2 - dU/dBeta, 1 - U, 0 - V
+breakupObject = 2 # 2 - dU/dBeta, 1 - U, 0 - V
 gridType = "LINEAR" # LOG/LINEAR
 nKnots = 14
-nImages = 10 # Naive Check
+nImages = 20 # Naive Check
 
 paIndex = 0
 for i in xrange(0, len(particles)):
