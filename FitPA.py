@@ -4,8 +4,6 @@ from scipy import interpolate, optimize
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
-print 'Beginning...'
-
 # Inputs
 nOrder = int(sys.argv[1])
 fileName = sys.argv[2]
@@ -55,9 +53,9 @@ for i in range(len(xs)):
         zmzds.append(0.)
     else:
         q = (xs[i] + ys[i])/2.
-        #zmzds.append(zs[i] - zd(q))
+        zmzds.append(zs[i] - zd(q))
         #zmzds.append(zs[i] - (xs[i]*zd(xs[i]) + ys[i]*zd(ys[i]))/(xs[i] + ys[i]))
-        zmzds.append(zs[i] - (zd(xs[i]) + zd(ys[i]))/2.)
+        #zmzds.append(zs[i] - (zd(xs[i]) + zd(ys[i]))/2.)
 
 # Spline z - zd
 print 'Interpolating...'
@@ -122,3 +120,27 @@ for i in range(nOrder):
     ax.set_xscale('log')
     ax.plot(t_qs,t_Ais,'-')
     plt.show()
+
+# Spline z - zd
+print 'Interpolating...'
+u_zs_new = zeros((len(u_xs),len(u_ys)))
+for i in range(len(u_xs)):
+    for j in range(len(u_ys)):
+        q = (u_xs[i] + u_ys[j])/2.
+        s = u_xs[i] - u_ys[j]
+        params = []
+        for i in range(nOrder):
+            params.append(Ais[i](q))
+        u_zs_new[i][j] = zd(q) + f_zod(s,*params)
+z_new = interpolate.RectBivariateSpline(u_xs,u_ys,u_zs_new)
+
+# Plot original data and spline
+print 'Plotting...'
+X, Y = meshgrid(u_xs, u_ys)
+Z = array([z_new(x,y) for x,y in zip(ravel(X), ravel(Y))])
+Z = Z.reshape(X.shape)
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(xs, ys, zs)
+ax.plot_surface(X, Y, Z)
+plt.show()
