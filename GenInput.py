@@ -1,11 +1,9 @@
 import sys
 from math import pi, sqrt
-from numpy import linspace, logspace
+from numpy import linspace, logspace, loadtxt, unique, log10
 import subprocess
-
-def GetUnique(a):
-  seen = set()
-  return [x for x in a if str(x) not in seen and not seen.add(str(x))]
+import FitPA
+import h5py as h5
 
 def GenIlkkaSquarerInput(D,tau,L,particles,nGrid,nSquare):
     N = len(particles)
@@ -29,7 +27,8 @@ def GenIlkkaSquarerInput(D,tau,L,particles,nGrid,nSquare):
     f.write('LevelUpdate 1 0.40 0.55\n')
     f.close()
 
-# Input parameters
+# Input parameters (label, lambda, Z)
+particles = [['e',0.5,1.0],['p',0.5,-1.0]]
 particles = [['e',0.5,1.0],['p',0.0002723089072243553,-1.0]]
 
 ## PIMC simulation
@@ -40,66 +39,133 @@ M = int((1/T)/tau) # number of time slices
 tau = (1/T)/M # used tau
 
 ## Squarer
-L = 100.0 # length of box
-nGrid = 200 # number of grid points
-nSquare = 33 # total number of squarings to reach lowest temperature
+bigL = 100.0 # length of box
+bigNGrid = 300 # number of grid points
+nSquare = 20 # total number of squarings to reach lowest temperature
+nOrder = -1 # order of off-diagonal PA fit: -1 = no fit (direct spline), 0 = only diagonal, 1-3 = fit off-diagonal to 1-3 order
+showPlots = 0 # show plots of fit to PA
 
 # Create Ilkka Squarer input
-print '**** Creating Squarer Inputs ****'
-GenIlkkaSquarerInput(D,tau,L,particles,nGrid,nSquare)
+print '**** Performing squaring ****'
+GenIlkkaSquarerInput(D,tau,bigL,particles,bigNGrid,nSquare)
 subprocess.call(['ilkkaSquarer'])
 
 ## Long-range breakup
 L = 10.0 # length of box
-r0 = 0.01 # first grid point
-rMax = L/2. # last grid point
-nGrid = 400 # number of grid points
-nMax = 20 # index of k cutoff for ewald
-rCut = 5.0 # r cutoff for ewald
-breakupType = 1 # 2 - Short-ranged only, 1 - Optimized breakup, 0 - Classical Ewald breakup
-breakupObject = 2 # 2 - dU/dBeta, 1 - U, 0 - V
+r0 = 0.001 # first grid point
+rCut = L/2. # r cutoff for ewald
+nGrid = 300 # number of grid points
 gridType = "LINEAR" # LOG/LINEAR
-nKnots = 14
-nImages = 20 # Naive Check
+breakupType = 1 # 2 - Short-ranged only, 1 - Optimized breakup, 0 - Classical Ewald breakup
+nKnots = 20 # number of knots in spline (probably fine)
+nImages = 100 # Naive check
 
+# Pair action objects (object type, max index in kspace)
+# 2 - dU/dBeta, 1 - U, 0 - V
+paObjects = [[2,10]]
+
+
+print '**** Performing breakup ****\n'
 paIndex = 0
 for i in xrange(0, len(particles)):
     for j in xrange(i, len(particles)):
         paIndex += 1
         [type1, lam1, Z1] = particles[i]
         [type2, lam2, Z2] = particles[j]
-        print type1, lam1, Z1, type2, lam2, Z2
+        print '****************************************'
+        print '****', type1, ', lam1 =', lam1, ', Z1 =', Z1
+        print '****', type2, ', lam2 =', lam2, ', Z2 =', Z2
 
         # Write potential
-        print '**** Writing potential to file ****'
         f = open('v.'+str(paIndex)+'.txt','w')
         if gridType=="LINEAR":
-          gridIndex = 0
-          rs = linspace(r0,20*rMax,num=20*nGrid,endpoint=True)
+            gridIndex = 0
+            rs = linspace(r0,bigL,num=bigNGrid,endpoint=True)
         elif gridType=="LOG":
-          gridIndex = 1
-          rs = logspace(log10(r0),log10(20*rMax),num=20*nGrid,endpoint=True)
+            gridIndex = 1
+            rs = logspace(log10(r0),log10(bigL),num=bigNGrid,endpoint=True)
         else:
-          print 'Unrecognized grid'
+            print 'Unrecognized grid'
         for r in rs:
-          f.write('%.10E %.10E\n' % (r,Z1*Z2/r))
+            f.write('%.10E %.10E\n' % (r,Z1*Z2/r))
         f.close()
 
         # Perform breakup
-        print '**** Performing breakup ****'
-        if breakupType != 2:
-          subprocess.call(['ewald',str(L),str(nMax),str(r0),str(rCut),str(nGrid),str(gridIndex),str(Z1*Z2),str(breakupType),str(breakupObject),str(paIndex),str(nKnots),str(tau),str(nImages)])
-          rMax = 0.75*sqrt(3)*L
-          kCut = 2*pi*nMax/L
-        else:
-          f = open('rData.txt','w')
-          if gridType=="LINEAR":
-            rs = linspace(r0,L/2.,num=nGrid,endpoint=True)
-          elif gridType=="LOG":
-            rs = logspace(log10(r0),log10(L/2.),num=nGrid,endpoint=True)
-          else:
-            print 'Unrecognized grid'
-          for r in rs:
-            f.write('%.10E %.10E %.10E\n' % (r,Z1*Z2/r,0.0))
-          f.close()
-          rMax = L/2.
+        for [paObject,nMax] in paObjects:
+            if paObject == 2:
+                paPrefix = 'du'
+            elif paObject == 1:
+                paPrefix = 'u'
+            elif paObject == 0:
+                paPrefix = 'v'
+            print '****\n', '****', paPrefix, '\n****'
+
+            if breakupType != 2:
+                subprocess.call(['ewald',str(L),str(nMax),str(r0),str(rCut),str(nGrid),str(gridIndex),str(Z1*Z2),str(breakupType),str(paObject),str(paIndex),str(nKnots),str(tau),str(nImages)])
+            else:
+                subprocess.call(['cp',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.r.txt'])
+
+            # Fit off-diagonal
+            if paObject != 0:
+                FitPA.main(['',nOrder,paPrefix+'s.'+str(paIndex)+'.txt',showPlots])
+            elif breakupType != 2:
+                subprocess.call(['cp',paPrefix+'.'+str(paIndex)+'.r.txt',paPrefix+'d.'+str(paIndex)+'.r.txt'])
+                subprocess.call(['cp',paPrefix+'.'+str(paIndex)+'.k.txt',paPrefix+'d.'+str(paIndex)+'.k.txt'])
+
+
+        # Write to h5 file
+        f = h5.File(type1+'-'+type2+'.h5','w')
+        info = f.create_group('Info')
+        info.attrs.create('type1',type1)
+        info.attrs.create('type2',type2)
+        info.attrs.create('lam1',lam1)
+        info.attrs.create('lam2',lam2)
+        info.attrs.create('Z1',Z1)
+        info.attrs.create('Z2',Z2)
+        for [paObject,nMax] in paObjects:
+            if paObject == 2:
+                paPrefix = 'du'
+            elif paObject == 1:
+                paPrefix = 'u'
+            elif paObject == 0:
+                paPrefix = 'v'
+            paGroup = f.create_group(paPrefix)
+
+            # Write out diagonal PA
+            paSubgroup = paGroup.create_group('diag')
+            paArray = loadtxt(paPrefix+'d.'+str(paIndex)+'.r.txt', comments='#')
+            if breakupType != 2:
+                paSubgroup.create_dataset(paPrefix+'Long_r0',data=[paArray[0,1]])
+                paSubgroup.create_dataset('r',data=paArray[1:,0])
+                paSubgroup.create_dataset(paPrefix+'Short_r',data=paArray[1:,1])
+                paArray = loadtxt(paPrefix+'d.'+str(paIndex)+'.k.txt', comments='#')
+                paSubgroup.create_dataset(paPrefix+'Long_k0',data=[paArray[0,1]])
+                paSubgroup.create_dataset('k',data=paArray[:,0])
+                paSubgroup.create_dataset(paPrefix+'Long_k',data=paArray[:,1])
+            else:
+                paSubgroup.create_dataset('r',data=paArray[:,0])
+                paSubgroup.create_dataset(paPrefix+'Short_r',data=paArray[:,1])
+
+
+            # Write out off diagonal PA
+            if paObject != 0:
+                paSubgroup = paGroup.create_group('offDiag')
+                paArray = loadtxt(paPrefix+'s.'+str(paIndex)+'.md.txt', comments='#')
+                xs = unique(paArray[:,0])
+                ys = unique(paArray[:,1])
+                zs = paArray[:,2].reshape((len(xs),len(ys)))
+                paSubgroup.create_dataset('x',data=xs)
+                paSubgroup.create_dataset('y',data=ys)
+                paSubgroup.create_dataset(paPrefix+'OffDiag',data=zs)
+
+                # Write out fit to off diagonal PA if desired
+                for iOrder in range(1,nOrder+1):
+                    paSubSubgroup = paSubgroup.create_group('A.'+str(iOrder))
+                    paArray = loadtxt(paPrefix+'s.'+str(paIndex)+'.A.'+str(iOrder)+'.txt', comments='#')
+                    paSubSubgroup.create_dataset('r',data=paArray[:,0])
+                    paSubSubgroup.create_dataset('A',data=paArray[:,1])
+
+        f.flush()
+        f.close()
+
+        print '****************************************'

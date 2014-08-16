@@ -45,8 +45,8 @@ def u00(tau, lam, Z1Z2, D, tol):
     nOrder = 10
     g = gam(tau, lam, Z1Z2)
     P = GetPs(nOrder, D)
-    for p in P:
-        print abs(p)
+    #for p in P:
+    #    print abs(p)
     u = 0.
     oldu = 1.e100
     for j in range(1,len(P)+1):
@@ -66,5 +66,5 @@ def du00dBeta(tau, lam, Z1Z2, D, tol):
     nOrder = 50
     return (u00(tau+dtau,lam,Z1Z2,D,tol) - u00(tau,lam,Z1Z2,D,tol))/dtau
 
-print u00(0.125,1.0,1.0,3,1e-4)
-#print du00dBeta(0.125,1.0,1.0,3,1e-4)
+print u00(0.125,0.5,1.0,3,1e-4)
+print du00dBeta(0.125,0.5,1.0,3,1e-4)
