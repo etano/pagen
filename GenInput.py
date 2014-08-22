@@ -62,7 +62,7 @@ nImages = 100 # Naive check
 
 # Pair action objects (object type, max index in kspace)
 # 2 - dU/dBeta, 1 - U, 0 - V
-paObjects = [[2,10]]
+paObjects = [[1,10],[2,10],[0,5]]
 
 
 print '**** Performing breakup ****\n'
