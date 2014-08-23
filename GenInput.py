@@ -1,8 +1,11 @@
 import sys
+import MPIClass
+mpi = MPIClass.MPI(False)
 from math import pi, sqrt
 from numpy import linspace, logspace, loadtxt, unique, log10
 import subprocess
 import FitPA
+import FixTail
 import h5py as h5
 
 def GenIlkkaSquarerInput(D,tau,L,particles,nGrid,nSquare):
@@ -44,6 +47,8 @@ bigNGrid = 300 # number of grid points
 nSquare = 20 # total number of squarings to reach lowest temperature
 nOrder = -1 # order of off-diagonal PA fit: -1 = no fit (direct spline), 0 = only diagonal, 1-3 = fit off-diagonal to 1-3 order
 showPlots = 0 # show plots of fit to PA
+tailMin = 1.0 # start of asymptotic tail behavior towards Coulomb
+tailMax = 3.0 # end of asymptotic tail behavior, before noisey data
 
 # Create Ilkka Squarer input
 print '**** Performing squaring ****'
@@ -62,7 +67,7 @@ nImages = 100 # Naive check
 
 # Pair action objects (object type, max index in kspace)
 # 2 - dU/dBeta, 1 - U, 0 - V
-paObjects = [[1,10],[2,10],[0,5]]
+paObjects = [[1,5],[2,5],[0,5]]
 
 
 print '**** Performing breakup ****\n'
@@ -94,12 +99,21 @@ for i in xrange(0, len(particles)):
         for [paObject,nMax] in paObjects:
             if paObject == 2:
                 paPrefix = 'du'
+                cofactor = Z1*Z2
             elif paObject == 1:
                 paPrefix = 'u'
+                cofactor = Z1*Z2*tau
             elif paObject == 0:
                 paPrefix = 'v'
+                cofactor = Z1*Z2
             print '****\n', '****', paPrefix, '\n****'
 
+            # Fix tail
+            if paObject != 0:
+                subprocess.call(['cp',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.orig.txt']) # Backup original
+                FixTail.main(['',paPrefix+'d.'+str(paIndex)+'.txt',cofactor,tailMin,tailMax])
+
+            # Do breakup
             if breakupType != 2:
                 subprocess.call(['ewald',str(L),str(nMax),str(r0),str(rCut),str(nGrid),str(gridIndex),str(Z1*Z2),str(breakupType),str(paObject),str(paIndex),str(nKnots),str(tau),str(nImages)])
             else:
