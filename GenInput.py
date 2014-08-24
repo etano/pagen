@@ -1,6 +1,4 @@
 import sys
-import MPIClass
-mpi = MPIClass.MPI(False)
 from math import pi, sqrt
 from numpy import linspace, logspace, loadtxt, unique, log10
 import subprocess
@@ -47,8 +45,7 @@ bigNGrid = 300 # number of grid points
 nSquare = 20 # total number of squarings to reach lowest temperature
 nOrder = -1 # order of off-diagonal PA fit: -1 = no fit (direct spline), 0 = only diagonal, 1-3 = fit off-diagonal to 1-3 order
 showPlots = 0 # show plots of fit to PA
-tailMin = 1.0 # start of asymptotic tail behavior towards Coulomb
-tailMax = 3.0 # end of asymptotic tail behavior, before noisey data
+
 
 # Create Ilkka Squarer input
 print '**** Performing squaring ****'
@@ -110,7 +107,13 @@ for i in xrange(0, len(particles)):
 
             # Fix tail
             if paObject != 0:
-                subprocess.call(['cp',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.orig.txt']) # Backup original
+                if (Z1 < 0 and Z2 < 0):
+                    tailMin = 0.1 # start of asymptotic tail behavior towards Coulomb
+                    tailMax = 0.3 # end of asymptotic tail behavior, before noisey data
+                else:
+                    tailMin = 1.0 # start of asymptotic tail behavior towards Coulomb
+                    tailMax = 3.0 # end of asymptotic tail behavior, before noisey data
+                subprocess.call(['cp','-n',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.orig.txt']) # Backup original
                 FixTail.main(['',paPrefix+'d.'+str(paIndex)+'.txt',cofactor,tailMin,tailMax])
 
             # Do breakup
