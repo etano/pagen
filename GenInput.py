@@ -42,8 +42,8 @@ tau = (1/T)/M # used tau
 ## Squarer
 bigL = 100.0 # length of box
 bigNGrid = 1000 # number of grid points
-bigGridType = "LINEAR"
-nSquare = 20 # total number of squarings to reach lowest temperature
+bigGridType = "OPTIMIZED"
+nSquare = 33 # total number of squarings to reach lowest temperature
 nOrder = -1 # order of off-diagonal PA fit: -1 = no fit (direct spline), 0 = only diagonal, 1-3 = fit off-diagonal to 1-3 order
 showPlots = 0 # show plots of fit to PA
 
@@ -55,17 +55,17 @@ subprocess.call(['ilkkaSquarer'])
 
 ## Long-range breakup
 L = 10.0 # length of box
-r0 = 0.001 # first grid point
+r0 = 0.0001 # first grid point
 rCut = L/2. # r cutoff for ewald
-nGrid = 300 # number of grid points
+nGrid = 1000 # number of grid points
 gridType = "OPTIMIZED" # LOG/LINEAR/OPTIMIZED
-nKnots = 40 # number of knots in spline (probably fine)
-nImages = 128 # Naive check
+nKnots = 20 # number of knots in spline (probably fine)
+nImages = 100 # Naive check
 
-# Pair action objects (object type, max index in kspace, breakup type)
+# Pair action objects (object type, kspace cutoff, breakup type)
 # object type : 2 - dU/dBeta, 1 - U, 0 - V
 # breakup type : 2 - Short-ranged only, 1 - Optimized breakup, 0 - Classical Ewald breakup
-paObjects = [[0,5,1],[2,5,2],[1,5,2]]
+paObjects = [[0,3.6,0],[1,3.6,0],[2,3.6,0]]
 
 
 print '**** Performing breakup ****\n'
@@ -125,7 +125,7 @@ for i in xrange(0, len(particles)):
             f.close()
     
             # Perform breakup
-            for [paObject,nMax,breakupType] in paObjects:
+            for [paObject,kCut,breakupType] in paObjects:
                 if paObject == 2:
                     paPrefix = 'du'
                     cofactor = Z1*Z2
@@ -151,7 +151,7 @@ for i in xrange(0, len(particles)):
     
                 # Do breakup
                 if breakupType != 2:
-                    subprocess.call(['ewald',str(L),str(nMax),str(r0),str(rCut),str(nGrid),str(gridIndex),str(Z1*Z2),str(breakupType),str(paObject),str(paIndex),str(nKnots),str(tau),str(nImages)])
+                    subprocess.call(['ewald',str(L),str(kCut),str(r0),str(rCut),str(nGrid),str(gridIndex),str(Z1*Z2),str(breakupType),str(paObject),str(paIndex),str(nKnots),str(tau),str(nImages)])
                 else:
                     subprocess.call(['cp',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.r.txt'])
     
@@ -176,7 +176,7 @@ for i in xrange(0, len(particles)):
             info.create_dataset('Z1',data=[Z1])
             info.create_dataset('Z2',data=[Z2])
             info.create_dataset('tau',data=[tau])
-            for [paObject,nMax,breakupType] in paObjects:
+            for [paObject,kCut,breakupType] in paObjects:
                 if paObject == 2:
                     paPrefix = 'du'
                 elif paObject == 1:
@@ -191,13 +191,16 @@ for i in xrange(0, len(particles)):
                 if breakupType != 2:
                     paSubgroup.create_dataset(paPrefix+'Long_r0',data=[paArray[0,1]])
                     paSubgroup.create_dataset('r',data=paArray[1:,0])
+                    paSubgroup.create_dataset('nr',data=len(paArray[1:,0]))
                     paSubgroup.create_dataset(paPrefix+'Short_r',data=paArray[1:,1])
                     paArray = loadtxt(paPrefix+'d.'+str(paIndex)+'.k.txt', comments='#')
                     paSubgroup.create_dataset(paPrefix+'Long_k0',data=[paArray[0,1]])
                     paSubgroup.create_dataset('k',data=paArray[:,0])
+                    paSubgroup.create_dataset('nk',data=len(paArray[:,0]))
                     paSubgroup.create_dataset(paPrefix+'Long_k',data=paArray[:,1])
                 else:
                     paSubgroup.create_dataset('r',data=paArray[:,0])
+                    paSubgroup.create_dataset('nr',data=len(paArray[:,0]))
                     paSubgroup.create_dataset(paPrefix+'Short_r',data=paArray[:,1])
     
     
@@ -209,7 +212,9 @@ for i in xrange(0, len(particles)):
                     ys = unique(paArray[:,1])
                     zs = paArray[:,2].reshape((len(xs),len(ys)))
                     paSubgroup.create_dataset('x',data=xs)
+                    paSubgroup.create_dataset('nx',data=len(xs))
                     paSubgroup.create_dataset('y',data=ys)
+                    paSubgroup.create_dataset('ny',data=len(ys))
                     paSubgroup.create_dataset(paPrefix+'OffDiag',data=zs)
     
                     # Write out fit to off diagonal PA if desired
@@ -217,6 +222,7 @@ for i in xrange(0, len(particles)):
                         paSubSubgroup = paSubgroup.create_group('A.'+str(iOrder))
                         paArray = loadtxt(paPrefix+'s.'+str(paIndex)+'.A.'+str(iOrder)+'.txt', comments='#')
                         paSubSubgroup.create_dataset('r',data=paArray[:,0])
+                        paSubSubgroup.create_dataset('nr',data=len(paArray[:,0]))
                         paSubSubgroup.create_dataset('A',data=paArray[:,1])
     
             f.flush()
