@@ -193,6 +193,8 @@ for i in xrange(0, len(particles)):
                     paSubgroup.create_dataset('r',data=paArray[1:,0])
                     paSubgroup.create_dataset('nr',data=len(paArray[1:,0]))
                     paSubgroup.create_dataset(paPrefix+'Short_r',data=paArray[1:,1])
+                    paArray = loadtxt(paPrefix+'d.'+str(paIndex)+'.txt', comments='#')
+                    paSubgroup.create_dataset(paPrefix+'_r',data=paArray[:,1])
                     paArray = loadtxt(paPrefix+'d.'+str(paIndex)+'.k.txt', comments='#')
                     paSubgroup.create_dataset(paPrefix+'Long_k0',data=[paArray[0,1]])
                     paSubgroup.create_dataset('k',data=paArray[:,0])
@@ -216,6 +218,10 @@ for i in xrange(0, len(particles)):
                     paSubgroup.create_dataset('y',data=ys)
                     paSubgroup.create_dataset('ny',data=len(ys))
                     paSubgroup.create_dataset(paPrefix+'OffDiag',data=zs)
+
+                    paArray = loadtxt(paPrefix+'s.'+str(paIndex)+'.txt', comments='#')
+                    zs = paArray[:,2].reshape((len(xs),len(ys)))
+                    paSubgroup.create_dataset(paPrefix+'_xy',data=zs)
     
                     # Write out fit to off diagonal PA if desired
                     for iOrder in range(1,nOrder+1):
