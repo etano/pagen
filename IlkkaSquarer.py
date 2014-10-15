@@ -2,7 +2,7 @@ from math import pi, sqrt
 from numpy import loadtxt, unique
 import subprocess
 import FitPA
-import FixTail
+from FixTail import FixTail
 from GenGrid import GenGrid
 import h5py as h5
 
@@ -67,9 +67,11 @@ def Breakup(particles,potential,squarer,breakup,objects):
             # Assign particle attributes
             [type1, lam1, Z1] = particles[i]['type'], particles[i]['lambda'], particles[i]['Z']
             [type2, lam2, Z2] = particles[j]['type'], particles[j]['lambda'], particles[j]['Z']
+            tau = squarer['tau']
             print '****************************************'
             print '****', type1, ', lam1 =', lam1, ', Z1 =', Z1
             print '****', type2, ', lam2 =', lam2, ', Z2 =', Z2
+            print '**** tau =', tau
 
             # Write potential
             f = open('v.'+str(paIndex)+'.txt','w')
@@ -89,26 +91,22 @@ def Breakup(particles,potential,squarer,breakup,objects):
             for o in objects:
                 if o['type'] == 2:
                     paPrefix = 'du'
-                    cofactor = Z1*Z2
+                    cofactor = 1.
                 elif o['type'] == 1:
                     paPrefix = 'u'
-                    cofactor = Z1*Z2*squarer['tau']
+                    cofactor = tau
                 elif o['type'] == 0:
                     paPrefix = 'v'
-                    cofactor = Z1*Z2
+                    cofactor = 1.
                 print '****\n', '****', paPrefix, '\n****'
     
                 # Fix tail
                 if o['type'] != 0:
-                    if (Z1 < 0 and Z2 < 0):
-                        tailMin = 0.1 # start of asymptotic tail behavior towards Coulomb
-                        tailMax = 0.3 # end of asymptotic tail behavior, before noisey data
-                    else:
-                        tailMin = 1.25 # start of asymptotic tail behavior towards Coulomb
-                        tailMax = 2.25 # end of asymptotic tail behavior, before noisey data
                     subprocess.call(['cp','-n',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.orig.txt']) # Backup original
                     subprocess.call(['cp',paPrefix+'d.'+str(paIndex)+'.orig.txt',paPrefix+'d.'+str(paIndex)+'.txt']) # Replace with original
-                    FixTail.main(['',paPrefix+'d.'+str(paIndex)+'.txt',cofactor,tailMin,tailMax])
+                    nPointsToFit = 10 # number of points to fit the tail with
+                    asymptote = lambda r: cofactor*potential['function'](Z1,Z2,r)
+                    FixTail(paPrefix+'d.'+str(paIndex)+'.txt',nPointsToFit,asymptote)
                 else:
                     subprocess.call(['cp',paPrefix+'.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.txt'])
 
@@ -125,7 +123,7 @@ def Breakup(particles,potential,squarer,breakup,objects):
                     subprocess.call(['ewald',str(breakup['L']),str(o['kCut']),str(breakup['r0']),
                                              str(breakup['rCut']),str(breakup['nGrid']),str(gridIndex),
                                              str(Z1*Z2),str(o['breakup']),str(o['type']),str(paIndex),
-                                             str(breakup['nKnots']),str(squarer['tau']),str(breakup['nImages'])])
+                                             str(breakup['nKnots']),str(tau),str(breakup['nImages'])])
                 else:
                     subprocess.call(['cp',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.r.txt'])
     
@@ -148,7 +146,7 @@ def Breakup(particles,potential,squarer,breakup,objects):
             info.attrs.create('Z2',Z2)
             info.create_dataset('Z1',data=[Z1])
             info.create_dataset('Z2',data=[Z2])
-            info.create_dataset('tau',data=[squarer['tau']])
+            info.create_dataset('tau',data=[tau])
             for o in objects:
                 if o['type'] == 2:
                     paPrefix = 'du'

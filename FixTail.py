@@ -1,23 +1,33 @@
 import sys
 from scipy.optimize import curve_fit
-from numpy import log10, array
+from numpy import log10, array, exp
 
-def usage():
-    print "Usage:  %s fileName xMin xMax" % os.path.basename(sys.argv[0])
+def FindMinMax(xs,ys,nPointsToFit):
+    xys = list(zip(xs,ys))
+    x_last = xys[-1][0]
+    y_last = xys[-1][1]
+    nPointsToFit = 10
+    nTrue = 0
+    for i in range(1,len(xys)):
+        x = xys[-i-1][0]
+        y = xys[-i-1][1]
+        if y > y_last:
+            nTrue += 1
+            if nTrue == 1:
+                xMax = x
+        else:
+            nTrue = 0
+        if nTrue == nPointsToFit:
+            xMin = x
+            break
+        x_last = x
+        y_last = y
+    xMin = pow(10.,xMin)
+    xMax = pow(10.,xMax)
+    print 'Setting xMin=', xMin, ', xMax=', xMax, '...'
+    return xMin, xMax
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    if "-h" in argv or "--help" in argv:
-        usage()
-        sys.exit(2)
-
-    # Inputs
-    fileName = argv[1]
-    cofactor = float(argv[2])
-    xMin = float(argv[3])
-    xMax = float(argv[4])
-    
+def FixTail(fileName,nPointsToFit,asymptote):
     # Read file
     f = open(fileName,'r')
     xs,ys = [],[]
@@ -27,12 +37,20 @@ def main(argv=None):
         ys.append(y)
     f.close()
     
+    # Find xmin and xmax
+    logxs,logys = [],[]
+    for (x,y) in zip(xs,ys):
+        if (x > 0):
+            logxs.append(log10(x))
+            logys.append(log10(abs(y-asymptote(x))))
+    xMin, xMax = FindMinMax(logxs,logys,nPointsToFit)
+
     # Select data and take difference with bare Coulomb
     logxs,logys = [],[]
     for (x,y) in zip(xs,ys):
         if x > xMin and x < xMax:
             logxs.append(log10(x))
-            logys.append(log10(abs(y-cofactor/x)))
+            logys.append(log10(abs(y-asymptote(x))))
     
     # Fit data
     def fn(x,m,b):
@@ -43,11 +61,7 @@ def main(argv=None):
     f = open(fileName,'w')
     for (x,y) in zip(xs,ys):
         if x > xMin:
-            f.write('%.10e %.10e\n' % (x, 10**fn(log10(x),*popt) + cofactor/x))
+            f.write('%.10e %.10e\n' % (x, 10**fn(log10(x),*popt) + asymptote(x)))
         else:
             f.write('%.10e %.10e\n' % (x,y))
     f.close()
-
-
-if __name__ == "__main__":
-    sys.exit(main())

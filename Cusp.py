@@ -66,5 +66,5 @@ def du00dBeta(tau, lam, Z1Z2, D, tol):
     nOrder = 50
     return (u00(tau+dtau,lam,Z1Z2,D,tol) - u00(tau,lam,Z1Z2,D,tol))/dtau
 
-print u00(0.125,0.5,1.0,3,1e-4)
+print u00(0.125,0.5,1.0,3,1e-5)
 print du00dBeta(0.125,0.5,1.0,3,1e-4)
