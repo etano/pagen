@@ -24,7 +24,6 @@ def FindMinMax(xs,ys,nPointsToFit):
         y_last = y
     xMin = pow(10.,xMin)
     xMax = pow(10.,xMax)
-    print 'Setting xMin=', xMin, ', xMax=', xMax, '...'
     return xMin, xMax
 
 def FixTail(fileName,nPointsToFit,asymptote):
@@ -44,6 +43,7 @@ def FixTail(fileName,nPointsToFit,asymptote):
             logxs.append(log10(x))
             logys.append(log10(abs(y-asymptote(x))))
     xMin, xMax = FindMinMax(logxs,logys,nPointsToFit)
+    print 'Setting xMin=', xMin, ', xMax=', xMax, '...'
 
     # Select data and take difference with bare Coulomb
     logxs,logys = [],[]
