@@ -9,7 +9,7 @@ def GenGrid(o):
     elif o['gridType']=="OPTIMIZED":
         rs = [o['r0']]
         f0 = 0.
-        a = 10.
+        a = exp(-0.58015)*pow(1.*o['nGrid'],0.506494) # Empirical factor
         dr = o['rCut']/(o['nGrid']-a)
         for iGrid in range(o['nGrid']):
             fi = f0 + 2.*(iGrid+1)*a/o['nGrid']
