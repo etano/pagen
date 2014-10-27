@@ -10,7 +10,7 @@ def GetUnique(a):
   seen = set()
   return [x for x in a if str(x) not in seen and not seen.add(str(x))]
 
-def GenPotgenInput(prefix,unit1,unit2,type1,type2,lam1,lam2,Z1Z2,L,D,tau,gridType,nGrid,r0,rCut,kCut,nTemp,nSquare,breakup):
+def GenPotgenInput(prefix,unit1,unit2,type1,type2,lam1,lam2,Z1Z2,L,D,tau,gridType,nGrid,rMin,rCut,kCut,nTemp,nSquare,breakup):
     # Determine temperatures
     if nTemp > 8:
         print 'WARNING: Max nTemp is 8!'
@@ -25,7 +25,7 @@ def GenPotgenInput(prefix,unit1,unit2,type1,type2,lam1,lam2,Z1Z2,L,D,tau,gridTyp
     f.write('UNITS '+unit1+' '+unit2+'\n')
     f.write('TYPE '+type1+' %f\n' % (lam1))
     f.write('TYPE '+type2+' %f\n' % (lam2))
-    f.write('GRID %i %s %f %f\n' % (nGrid,gridType,r0,rCut))
+    f.write('GRID %i %s %f %f\n' % (nGrid,gridType,rMin,rCut))
     f.write('SQUARER %f %i %i 3 30 %i\n' % (1./maxTau,nTemp,D,nSquare))
     boxString = ' '.join([str(L) for i in range(D)])
     if breakup == 2:
@@ -107,7 +107,7 @@ def Breakup(units,particles,potential,squarer,breakup,objects):
             # Generate potgen input
             GenPotgenInput(prefix,units['energy'],units['distance'],type1,type2,lam1,lam2,Z1*Z2,
                            breakup['L'],breakup['D'],squarer['tau'],breakup['gridType'],
-                           breakup['nGrid'],breakup['r0'],breakup['rCut'],objects[0]['kCut'],
+                           breakup['nGrid'],breakup['rMin'],breakup['rCut'],objects[0]['kCut'],
                            squarer['nTemp'],squarer['nSquare'],objects[0]['breakup'])
 
             # Write potential
@@ -135,7 +135,7 @@ def Breakup(units,particles,potential,squarer,breakup,objects):
                 else:
                     print 'Unrecognized grid:', breakup['gridType']
 
-                subprocess.call(['ewald',str(breakup['L']),str(objects[0]['kCut']),str(breakup['r0']),
+                subprocess.call(['ewald',str(breakup['L']),str(objects[0]['kCut']),str(breakup['rMin']),
                                  str(breakup['rCut']),str(breakup['nGrid']),str(gridIndex),
                                  str(Z1*Z2),str(objects[0]['breakup']),str(objects[0]['type']),str(paIndex),
                                  str(breakup['nKnots']),str(squarer['tau']),str(breakup['nImages'])])
@@ -169,7 +169,7 @@ def Breakup(units,particles,potential,squarer,breakup,objects):
                     g.write(str(-2.837297479*Z1*Z2/breakup['L']))
             g.write('\n POTTAIL 0.0')
             g.write('\n RANK 2 '+str(breakup['nGrid'])+' 1')
-            g.write('\n GRID 1 '+breakup['gridType']+' '+str(breakup['r0'])+' '+str(breakup['rCut']))
+            g.write('\n GRID 1 '+breakup['gridType']+' '+str(breakup['rMin'])+' '+str(breakup['rCut']))
             g.write('\n LABEL 1 r')
             g.write('\n BEGIN potential 0')
             rData = loadtxt('v.'+str(paIndex)+'.r.txt')

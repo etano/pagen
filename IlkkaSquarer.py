@@ -18,7 +18,7 @@ def GenIlkkaSquarerInput(particles,squarer):
     f.write('%f 0\n' % (squarer['tau'])) # tau, 0 or temperature, 1
     f.write('5000 100000\n') # of blocks, # of MC steps in a block
     f.write('Squaring %i %i 1\n' % (squarer['nGrid'],squarer['nSquare'])) # text, grid points, # of squaring steps
-    f.write('Box %f %f %f\n' % (squarer['rCut'],squarer['rCut'],squarer['rCut'])) # text, box dimensions in atomic units (Bohr radius)
+    f.write('Box %f %f %f\n' % (squarer['rMax'],squarer['rMax'],squarer['rMax'])) # text, box dimensions in atomic units (Bohr radius)
     f.write('NumOfImages 0\n') # # of images
     f.write('DisplaceMove 0 0.0\n') # text, 0 if not used (1 if used), 0.1 would mean 10 percent of moves are displace moves
     f.write('Estimator 1\n') # 0=IK_type (atoms and if all quantum particles), 1=thermal estimator
@@ -53,8 +53,25 @@ def GenPairActionInput(prefix,type1,lam1,type2,lam2,D,longRange):
     f.close()
 
 def Square(particles,squarer):
+    # Perform squaring
     GenIlkkaSquarerInput(particles,squarer)
     subprocess.call(['ilkkaSquarer'])
+
+    # Check for duplicates
+    paIndex = 0
+    combos = []
+    for i in xrange(0, len(particles)):
+        for j in xrange(i, len(particles)):
+            paIndex += 1
+            [Z1Z2,lam1,lam2] = [particles[i]['Z']*particles[j]['Z'],particles[i]['lambda'],particles[j]['lambda']]
+            try:
+                prevIndex = combos.index([Z1Z2,abs(lam1-lam2)]) + 1
+                subprocess.call(['cp','ud.'+str(prevIndex)+'.txt','ud.'+str(paIndex)+'.txt'])
+                subprocess.call(['cp','us.'+str(prevIndex)+'.txt','us.'+str(paIndex)+'.txt'])
+                subprocess.call(['cp','dud.'+str(prevIndex)+'.txt','dud.'+str(paIndex)+'.txt'])
+                subprocess.call(['cp','dus.'+str(prevIndex)+'.txt','dus.'+str(paIndex)+'.txt'])
+            except:
+                combos.append([Z1Z2,abs(lam1-lam2)])
 
 def Breakup(particles,potential,squarer,breakup,objects):
     paIndex = 0
@@ -101,13 +118,13 @@ def Breakup(particles,potential,squarer,breakup,objects):
                 print '****\n', '****', paPrefix, '\n****'
     
                 # Fix tail
-                if o['type'] != 0:
-                    subprocess.call(['cp','-n',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.orig.txt']) # Backup original
-                    subprocess.call(['cp',paPrefix+'d.'+str(paIndex)+'.orig.txt',paPrefix+'d.'+str(paIndex)+'.txt']) # Replace with original
+                subprocess.call(['cp','-n',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.orig.txt']) # Backup original
+                subprocess.call(['cp',paPrefix+'d.'+str(paIndex)+'.orig.txt',paPrefix+'d.'+str(paIndex)+'.txt']) # Replace with original
+                if o['type'] != 0 and o['breakup'] != 0:
                     nPointsToFit = 10 # number of points to fit the tail with
                     asymptote = lambda r: cofactor*potential['function'](Z1,Z2,r)
                     FixTail(paPrefix+'d.'+str(paIndex)+'.txt',nPointsToFit,asymptote)
-                else:
+                elif o['type'] == 0:
                     subprocess.call(['cp',paPrefix+'.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.txt'])
 
                 # Do breakup
@@ -120,7 +137,7 @@ def Breakup(particles,potential,squarer,breakup,objects):
                         gridIndex = 2
                     else:
                         print 'Unrecognized grid:', breakup['gridType']
-                    subprocess.call(['ewald',str(breakup['L']),str(o['kCut']),str(breakup['r0']),
+                    subprocess.call(['ewald',str(breakup['L']),str(o['kCut']),str(breakup['rMin']),
                                              str(breakup['rCut']),str(breakup['nGrid']),str(gridIndex),
                                              str(Z1*Z2),str(o['breakup']),str(o['type']),str(paIndex),
                                              str(breakup['nKnots']),str(tau),str(breakup['nImages'])])
