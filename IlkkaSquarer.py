@@ -145,9 +145,9 @@ def Breakup(particles,potential,squarer,breakup,objects):
                     subprocess.call(['cp',paPrefix+'d.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.r.txt'])
     
                 # Fit off-diagonal
-                if o['type'] != 0:
+                if o['type'] != 0 and squarer['nOrder'] > 0:
                     FitPA.main(['',squarer['nOrder'],paPrefix+'s.'+str(paIndex)+'.txt',0])
-                elif o['breakup'] != 2:
+                elif o['type'] == 0 and o['breakup'] != 2:
                     subprocess.call(['cp',paPrefix+'.'+str(paIndex)+'.r.txt',paPrefix+'d.'+str(paIndex)+'.r.txt'])
                     subprocess.call(['cp',paPrefix+'.'+str(paIndex)+'.k.txt',paPrefix+'d.'+str(paIndex)+'.k.txt'])
     
@@ -194,7 +194,7 @@ def Breakup(particles,potential,squarer,breakup,objects):
                 # Write out off diagonal PA
                 if o['type'] != 0:
                     paSubgroup = paGroup.create_group('offDiag')
-                    paArray = loadtxt(paPrefix+'s.'+str(paIndex)+'.md.txt', comments='#')
+                    paArray = loadtxt(paPrefix+'s.'+str(paIndex)+'.txt', comments='#')
                     xs = unique(paArray[:,0])
                     ys = unique(paArray[:,1])
                     zs = paArray[:,2].reshape((len(xs),len(ys)))
@@ -202,12 +202,8 @@ def Breakup(particles,potential,squarer,breakup,objects):
                     paSubgroup.create_dataset('nx',data=len(xs))
                     paSubgroup.create_dataset('y',data=ys)
                     paSubgroup.create_dataset('ny',data=len(ys))
-                    paSubgroup.create_dataset(paPrefix+'OffDiag',data=zs)
-
-                    paArray = loadtxt(paPrefix+'s.'+str(paIndex)+'.txt', comments='#')
-                    zs = paArray[:,2].reshape((len(xs),len(ys)))
                     paSubgroup.create_dataset(paPrefix+'_xy',data=zs)
-    
+
                     # Write out fit to off diagonal PA if desired
                     for iOrder in range(1,squarer['nOrder']+1):
                         paSubSubgroup = paSubgroup.create_group('A.'+str(iOrder))
@@ -220,11 +216,12 @@ def Breakup(particles,potential,squarer,breakup,objects):
             f.close()
     
             # Build PairAction File
-            print 'Creating pairAction file...'
-            longRange = 0
-            if objects[0]['breakup'] != 2:
-                longRange = 1
-            GenPairActionInput(prefix,type1,lam1,type2,lam2,squarer['D'],longRange)
+            if breakup['GenPIMCPairActionFile']:
+                print 'Creating pairAction file...'
+                longRange = 0
+                if objects[0]['breakup'] != 2:
+                    longRange = 1
+                GenPairActionInput(prefix,type1,lam1,type2,lam2,squarer['D'],longRange)
 
             print '****************************************'
 
