@@ -5,6 +5,9 @@ import FitPA
 from FixTail import FixTail
 from GenGrid import GenGrid
 import h5py as h5
+import os, sys
+
+PAGEN_HOME=os.path.dirname(os.path.realpath(__file__))
 
 def GenIlkkaSquarerInput(particles,squarer):
     N = len(particles)
@@ -55,7 +58,7 @@ def GenPairActionInput(prefix,type1,lam1,type2,lam2,D,longRange):
 def Square(particles,squarer):
     # Perform squaring
     GenIlkkaSquarerInput(particles,squarer)
-    subprocess.call(['ilkkaSquarer'])
+    subprocess.call([PAGEN_HOME+'/ilkkaSquarer/ilkkaSquarer'])
 
     # Check for duplicates
     paIndex = 0
@@ -137,7 +140,7 @@ def Breakup(particles,potential,squarer,breakup,objects):
                         gridIndex = 2
                     else:
                         print 'Unrecognized grid:', breakup['gridType']
-                    subprocess.call(['ewald',str(breakup['L']),str(o['kCut']),str(breakup['rMin']),
+                    subprocess.call([PAGEN_HOME+'/ewald/ewald',str(breakup['L']),str(o['kCut']),str(breakup['rMin']),
                                              str(breakup['rCut']),str(breakup['nGrid']),str(gridIndex),
                                              str(Z1*Z2),str(o['breakup']),str(o['type']),str(paIndex),
                                              str(breakup['nKnots']),str(tau),str(breakup['nImages'])])
