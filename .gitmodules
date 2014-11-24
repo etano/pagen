@@ -1,0 +1,3 @@
+[submodule "davidSquarer"]
+	path = davidSquarer
+	url = git@github.com:etano/squarer.git
