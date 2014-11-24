@@ -58,7 +58,6 @@ def GenPairActionInput(prefix,type1,lam1,type2,lam2,D,longRange):
 def Square(particles,squarer):
     # Perform squaring
     GenIlkkaSquarerInput(particles,squarer)
-    print PAGEN_HOME+'/ilkkaSquarer/ilkkaSquarer'
     subprocess.call([PAGEN_HOME+'/ilkkaSquarer/ilkkaSquarer'])
 
     # Check for duplicates
