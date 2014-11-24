@@ -1,13 +1,12 @@
 import sys, os
-sys.path.append(os.environ['HOME']+'/src/pagen')
-from GenPairAction import *
 from math import sqrt
-
-tau = 0.125
-L = 100.0
 
 # Units
 units = {'energy':'H', 'distance':'A'}
+
+# Constants
+tau = 0.125 # Time step
+L = 100.0 # Box size
 
 # Particles
 particles = [{'type': 'e', 'lambda': 0.5, 'Z': 1.0},
@@ -53,4 +52,12 @@ objects = [{'type': 0, 'breakup': 2, 'kCut': 0.},
            {'type': 1, 'breakup': 2, 'kCut': 0.},
            {'type': 2, 'breakup': 2, 'kCut': 0.}]
 
+# Exact location of PAGEN scripts
+PAGEN_HOME = os.environ['HOME']+'/src/pagen'
+
+#-----------------------------
+# DO NOT EDIT BELOW THIS LINE
+#-----------------------------
+sys.path.append(PAGEN_HOME)
+from GenPairAction import *
 run(units,particles,potential,squarer,breakup,objects)
