@@ -1,3 +1,6 @@
 [submodule "davidSquarer"]
 	path = davidSquarer
 	url = git@github.com:etano/squarer.git
+[submodule "ewald"]
+	path = ewald
+	url = git@github.com:etano/ewald.git
