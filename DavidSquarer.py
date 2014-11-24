@@ -136,7 +136,7 @@ def Breakup(units,particles,potential,squarer,breakup,objects):
                 else:
                     print 'Unrecognized grid:', breakup['gridType']
 
-                subprocess.call([PAGEN_HOME+'/ewald/ewald',str(breakup['L']),str(objects[0]['kCut']),str(breakup['rMin']),
+                subprocess.call([PAGEN_HOME+'/ewald/bin/ewald',str(breakup['L']),str(objects[0]['kCut']),str(breakup['rMin']),
                                  str(breakup['rCut']),str(breakup['nGrid']),str(gridIndex),
                                  str(Z1*Z2),str(objects[0]['breakup']),str(objects[0]['type']),str(paIndex),
                                  str(breakup['nKnots']),str(squarer['tau']),str(breakup['nImages'])])
