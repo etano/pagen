@@ -3,6 +3,12 @@ pagen
 
 Pair action generation scripts
 
+Requirements
+------------
+
+* Python (with Numpy and Scipy)
+* C++, C, and Fortran compiler
+
 Installation
 ------------
 #
