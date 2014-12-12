@@ -126,7 +126,10 @@ def Breakup(particles,potential,squarer,breakup,objects):
                 if o['type'] != 0 and o['breakup'] != 0:
                     nPointsToFit = 10 # number of points to fit the tail with
                     asymptote = lambda r: cofactor*potential['function'](Z1,Z2,r)
-                    FixTail(paPrefix+'d.'+str(paIndex)+'.txt',nPointsToFit,asymptote)
+                    try:
+                        FixTail(paPrefix+'d.'+str(paIndex)+'.txt',nPointsToFit,asymptote)
+                    except:
+                        break
                 elif o['type'] == 0:
                     subprocess.call(['cp',paPrefix+'.'+str(paIndex)+'.txt',paPrefix+'d.'+str(paIndex)+'.txt'])
 
