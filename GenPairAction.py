@@ -1,5 +1,6 @@
-import IlkkaSquarer
+import BareSquarer
 import DavidSquarer
+import IlkkaSquarer
 
 def run(units,particles,potential,squarer,breakup,objects):
 
@@ -19,3 +20,8 @@ def run(units,particles,potential,squarer,breakup,objects):
 
         print '\n**** Performing squaring ****\n'
         DavidSquarer.Square(particles,squarer,objects)
+
+    elif squarer['type'] is 'None':
+
+        print '\n**** Performing breakup ****\n'
+        BareSquarer.Breakup(particles,potential,squarer,breakup,objects)
