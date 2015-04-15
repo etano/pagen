@@ -76,7 +76,7 @@ def Square(particles,squarer,objects):
 
             # Squarer
             print 'Performing squaring procedure...'
-            subprocess.call([PAGEN_HOME+'davidSquarer/sqdir/squarer',prefix])
+            subprocess.call([PAGEN_HOME+'/davidSquarer/sqdir/squarer',prefix])
 
             # Density Matrix Parser
             print 'Parsing density matrix...'
