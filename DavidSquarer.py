@@ -11,7 +11,7 @@ def GetUnique(a):
   seen = set()
   return [x for x in a if str(x) not in seen and not seen.add(str(x))]
 
-def GenPotgenInput(prefix,unit1,unit2,type1,type2,lam1,lam2,Z1Z2,L,D,tau,gridType,nGrid,rMin,rCut,kCut,nTemp,nSquare,breakup):
+def GenPotgenInput(prefix,unit1,unit2,type1,type2,lam1,lam2,Z1Z2,L,D,tau,gridType,nGrid,rMin,rMax,rCut,kCut,nTemp,nSquare,breakup):
     # Determine temperatures
     if nTemp > 8:
         print 'WARNING: Max nTemp is 8!'
@@ -23,18 +23,18 @@ def GenPotgenInput(prefix,unit1,unit2,type1,type2,lam1,lam2,Z1Z2,L,D,tau,gridTyp
 
     print 'Creating '+prefix+'.in'
     f = open(prefix+'.in','w')
-    f.write('UNITS '+unit1+' '+unit2+'\n')
-    f.write('TYPE '+type1+' %f\n' % (lam1))
-    f.write('TYPE '+type2+' %f\n' % (lam2))
-    f.write('GRID %i %s %f %f\n' % (nGrid,gridType,rMin,rCut))
-    f.write('SQUARER %f %i %i 3 30 %i\n' % (1./maxTau,nTemp,D,nSquare))
+    f.write(' UNITS '+unit1+' '+unit2)
+    f.write('\n TYPE '+type1+' %f' % (lam1))
+    f.write('\n TYPE '+type2+' %f' % (lam2))
+    f.write('\n GRID %i %s %f %f' % (nGrid,gridType,rMin,rMax))
+    f.write('\n SQUARER %f %i %i 3 30 %i' % (1./maxTau,nTemp,D,nSquare))
     boxString = ' '.join([str(L) for i in range(D)])
     if breakup == 2:
-        f.write('POT COUL %f %f 0.D0\n' % (rCut,Z1Z2))
+        f.write('\n POT COUL %f %f 0.D0' % (rCut,Z1Z2))
     if breakup == 1:
-        f.write('POT COULOPT %f %f %f %i 0.D0 1.0 %s\n' % (rCut,kCut,Z1Z2,D,boxString))
+        f.write('\n POT COULOPT %f %f %f %i 0.D0 1.0 %s' % (rCut,kCut,Z1Z2,D,boxString))
     elif breakup == 0:
-        f.write('POT COULLR %f %f %f %i 0.D0 1.0 %s\n' % (rCut,kCut,Z1Z2,D,boxString))
+        f.write('\n POT COULLR %f %f %f %i 0.D0 1.0 %s' % (rCut,kCut,Z1Z2,D,boxString))
     f.close()
 
 def GenPairActionInput(prefix,type1,lam1,type2,lam2,D,longRange):
@@ -108,7 +108,7 @@ def Breakup(units,particles,potential,squarer,breakup,objects):
             # Generate potgen input
             GenPotgenInput(prefix,units['energy'],units['distance'],type1,type2,lam1,lam2,Z1*Z2,
                            breakup['L'],breakup['D'],squarer['tau'],breakup['gridType'],
-                           breakup['nGrid'],breakup['rMin'],breakup['rCut'],objects[0]['kCut'],
+                           breakup['nGrid'],breakup['rMin'],breakup['rMax'],breakup['rCut'],objects[0]['kCut'],
                            squarer['nTemp'],squarer['nSquare'],objects[0]['breakup'])
 
             # Write potential
@@ -126,64 +126,73 @@ def Breakup(units,particles,potential,squarer,breakup,objects):
             f.close()
 
             # Do breakup
-            if objects[0]['breakup'] != 2:
-                if breakup['gridType']=="LINEAR":
-                    gridIndex = 0
-                elif breakup['gridType']=="LOG":
-                    gridIndex = 1
-                elif breakup['gridType']=="OPTIMIZED":
-                    gridIndex = 2
-                else:
-                    print 'Unrecognized grid:', breakup['gridType']
-
-                subprocess.call([PAGEN_HOME+'/ewald/bin/ewald',str(breakup['L']),str(objects[0]['kCut']),str(breakup['rMin']),
-                                 str(breakup['rCut']),str(breakup['nGrid']),str(gridIndex),
-                                 str(Z1*Z2),str(objects[0]['breakup']),str(objects[0]['type']),str(paIndex),
-                                 str(breakup['nKnots']),str(squarer['tau']),str(breakup['nImages'])])
-
-                # Write .yk file
-                kData = loadtxt('v.'+str(paIndex)+'.k.txt')
-                ks = kData[:,0]
-                Vks = kData[:,1]
-                f = open(prefix+'.yk','w')
-                for [k,Vk] in zip(ks,Vks):
-                    f.write('  %.10E'%k+'       %.10E'%Vk+'\n')
-                f.close()
-            else:
-                f = open('v.'+str(paIndex)+'.r.txt','w')
-                rs = GenGrid(potential)
-                for r in rs:
-                    f.write('%.10E %.10E\n' % (r,potential['function'](Z1,Z2,r)))
-                f.close()
-
-            # Write .dm and .in file for squarer
-            g = open(prefix+'.dm','w')
-            f = open(prefix+'.in','r')
-            for line in f:
-                g.write(line)
-            f.close()
-            if objects[0]['breakup'] != 2:
-                g.write('\n VIMAGE ')
-                if (breakup['D'] == 2):
-                    g.write(str(-3.90026492*Z1*Z2/breakup['L']))
-                elif (breakup['D'] == 3):
-                    g.write(str(-2.837297479*Z1*Z2/breakup['L']))
-            g.write('\n POTTAIL 0.0')
-            g.write('\n RANK 2 '+str(breakup['nGrid'])+' 1')
-            g.write('\n GRID 1 '+breakup['gridType']+' '+str(breakup['rMin'])+' '+str(breakup['rCut']))
-            g.write('\n LABEL 1 r')
-            g.write('\n BEGIN potential 0')
-            rData = loadtxt('v.'+str(paIndex)+'.r.txt')
-            count = 0
-            g.write('\n  ')
-            for [r,V] in rData:
-                if r != 0.:
-                    if objects[0]['breakup'] != 2:
-                        g.write('%.10E'%(potential['function'](Z1,Z2,r) - VLong)+'  ')
+	    if breakup['type']=="simpimcEwald":
+                if objects[0]['breakup'] != 2:
+                    if breakup['gridType']=="LINEAR":
+                        gridIndex = 0
+                    elif breakup['gridType']=="LOG":
+                        gridIndex = 1
+                    elif breakup['gridType']=="OPTIMIZED":
+                        gridIndex = 2
                     else:
-                        g.write('%.10E'%(V)+'  ')
-                    count += 1
-                    if count % 5 == 0:
-                        g.write('\n  ')
-            g.write('\n')
-            g.close()
+                        print 'Unrecognized grid:', breakup['gridType']
+
+                    subprocess.call([PAGEN_HOME+'/ewald/bin/ewald',str(breakup['L']),str(objects[0]['kCut']),str(breakup['rMin']),
+                                     str(breakup['rCut']),str(breakup['nGrid']),str(gridIndex),
+                                     str(Z1*Z2),str(objects[0]['breakup']),str(objects[0]['type']),str(paIndex),
+                                     str(breakup['nKnots']),str(squarer['tau']),str(breakup['nImages'])])
+
+                    # Write .yk file
+                    kData = loadtxt('v.'+str(paIndex)+'.k.txt')
+                    ks = kData[:,0]
+                    Vks = kData[:,1]
+                    f = open(prefix+'.yk','w')
+                    for [k,Vk] in zip(ks,Vks):
+                        f.write('  %.10E'%k+'       %.10E'%Vk+'\n')
+                    f.close()
+                else:
+                    f = open('v.'+str(paIndex)+'.r.txt','w')
+                    rs = GenGrid(potential)
+                    for r in rs:
+                        f.write('%.10E %.10E\n' % (r,potential['function'](Z1,Z2,r)))
+                    f.close()
+
+                # Write .dm and .in file for squarer
+                g = open(prefix+'.dm','w')
+                f = open(prefix+'.in','r')
+                for line in f:
+                    g.write(line)
+                f.close()
+                if objects[0]['breakup'] != 2:
+                    g.write('\n VIMAGE ')
+                    if (breakup['D'] == 2):
+                        g.write(str(-3.90026492*Z1*Z2/breakup['L']))
+                    elif (breakup['D'] == 3):
+                        g.write(str(-2.837297479*Z1*Z2/breakup['L']))
+                g.write('\n POTTAIL 0.0')
+                g.write('\n RANK 2 '+str(breakup['nGrid'])+' 1')
+                if objects[0]['breakup'] != 2:
+                    g.write('\n GRID 1 '+breakup['gridType']+' '+str(breakup['rMin'])+' '+str(breakup['rCut']))
+                else:
+                    g.write('\n GRID 1 '+breakup['gridType']+' '+str(breakup['rMin'])+' '+str(breakup['rMax']))
+                g.write('\n LABEL 1 r')
+                g.write('\n BEGIN potential 0')
+                rData = loadtxt('v.'+str(paIndex)+'.r.txt')
+                count = 0
+                g.write('\n  ')
+                for [r,V] in rData:
+                    if r != 0.:
+                        if objects[0]['breakup'] != 2:
+                            g.write('%.10E'%(potential['function'](Z1,Z2,r) - VLong)+'  ')
+                        else:
+                            g.write('%.10E'%(V)+'  ')
+                        count += 1
+                        if count % 5 == 0:
+                            g.write('\n  ')
+                g.write('\n')
+                g.close()
+	    elif breakup['type']=="potgen":
+                if objects[0]['breakup'] != 2:
+                    subprocess.call([PAGEN_HOME+'/davidSquarer/sqdir/potgen_lr',prefix])
+                else: 
+                    subprocess.call([PAGEN_HOME+'/davidSquarer/sqdir/potgen_sr',prefix])
