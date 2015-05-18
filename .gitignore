@@ -8,4 +8,5 @@
 INPUT
 test
 *.so
+*.swo
 ilkkaSquarer/ilkkaSquarer
