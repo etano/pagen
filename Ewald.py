@@ -230,9 +230,11 @@ class EwaldBreakup(object):
             max_k_i.append(int(ceil(1.1*k_cont/self.k_box[d_i])))
 
         # Generate k indices
+        print '......generating ks...'
         k_is = self.GenKis(max_k_i)
 
         # Set up discrete ks
+        print '......adding discrete ks...'
         mag_ks_dict = {}
         for k_i in k_is:
             k = k_i*self.k_box
@@ -241,6 +243,7 @@ class EwaldBreakup(object):
                 self.Addk(mag_ks_dict,mag_k)
 
         # Set up continuous ks
+        print '......adding continuous ks...'
         N = 4000 # TODO: This is just fixed
         delta_k = (k_max-k_cont)/N
         for i in range(N):
@@ -252,6 +255,7 @@ class EwaldBreakup(object):
             self.Addk(mag_ks_dict,k,degeneracy)
 
         # Create opt_mag_ks
+        print '......creating ks object...'
         self.opt_mag_ks = []
         for mag_k in mag_ks_dict.iterkeys():
             self.opt_mag_ks.append([float(mag_k),mag_ks_dict[mag_k]])
@@ -304,7 +308,7 @@ class EwaldBreakup(object):
             if (self.n_d == 2): #FIXME: Check this is correct
                 f_v_l = (2.*self.cofactor*np.sqrt(pi)*self.z_1_z_2/(mag_k*self.vol))*exp(-k_2/(4.*alpha*alpha))
             elif (self.n_d == 3):
-                f_v_l = (4.*pi*self.z_1_z_2/(k_2*self.vol))*exp(-k_2/(4.*alpha*alpha))
+                f_v_l = (4.*pi*self.cofactor*self.z_1_z_2/(k_2*self.vol))*exp(-k_2/(4.*alpha*alpha))
             f_v_ls.append([mag_k, f_v_l])
         mag_k_prev = -1
         for [mag_k,f_v_l] in sorted(f_v_ls):
@@ -340,8 +344,11 @@ class EwaldBreakup(object):
             x_k += prefactor * integrate(v_integrand, r_cut, r_first, divmax=20)
 
             # Other segments
-            n_pi_k = 100*int(k)*pi/k # TODO: Manually fixed number currently
-            n_seg = int(floor((r_max-r_first)/n_pi_k))
+            if (int(k) != 0):
+                n_pi_k = int(k)*pi/k # TODO: Manually fixed number currently
+            else:
+                n_pi_k = pi/k
+            n_seg = max(int(floor((r_max-r_first)/n_pi_k)),1)
             for i in range(n_seg):
                 x_k += prefactor * integrate(v_integrand, r_first+i*n_pi_k, r_first+(i+1)*n_pi_k, divmax=20)
             r_end = r_first + n_seg*n_pi_k
@@ -398,9 +405,13 @@ class EwaldBreakup(object):
         print '...calculating Xk...'
         x_k = []
         tot_x_k = 0.
+        percent_i = 1
         for k_i in range(n_k):
             k = self.opt_mag_ks[k_i][0]
             x_k.append(self.CalcXk(v_r_spline, self.r_cut, k, r_max)/self.vol)
+            if (float(k_i)/float(n_k)) > percent_i*0.1:
+                print '......', percent_i*10, '% complete...'
+                percent_i += 1
             tot_x_k += x_k[k_i]
 
         # Fill in c_n_k
@@ -505,7 +516,6 @@ class EwaldBreakup(object):
             chi_2 += self.opt_mag_ks[k_i][1]*y_k*y_k
         print '...chi^2 = ', chi_2,'...'
 
-
         # Compose real space part
         print '...composing real space part...'
         v_l_0 = 0.
@@ -527,7 +537,7 @@ class EwaldBreakup(object):
             if r < self.r_min:
                 r = self.r_min
             return r*r*(v_r_spline(r) - v_l_spline(r))
-        f_v_s_0 = integrate(v_short_integrand, 1.e-100, self.r_cut, divmax=100)
+        f_v_s_0 = -integrate(v_short_integrand, 1.e-100, self.r_cut, divmax=100)
         if (self.n_d == 2):
             f_v_s_0 *= 2.*pi/self.vol # FIXME: Probably wrong for 2D
         elif (self.n_d == 3):
@@ -538,7 +548,7 @@ class EwaldBreakup(object):
             if r < self.r_min:
                 r = self.r_min
             return r*r*v_l_spline(r)
-        f_v_l_0 = integrate(v_long_integrand, 1.e-100, self.r_cut, divmax=100)
+        f_v_l_0 = -integrate(v_long_integrand, 1.e-100, self.r_cut, divmax=100)
         if (self.n_d == 2):
             f_v_s_0 *= 2.*pi/self.vol # FIXME: Probably wrong for 2D
         elif (self.n_d == 3):
@@ -696,7 +706,7 @@ class EwaldBreakup(object):
                     r = r_0 + n_i*self.box
                     mag_r = np.sqrt(np.dot(r,r))
                     if (mag_r > r_max):
-                        v_s += qs[i]*qs[j]/mag_r
+                        v_s += self.cofactor*qs[i]*qs[j]/mag_r
                     else:
                         v_s += qs[i]*qs[j]*v_r_spline(mag_r)
 
@@ -709,7 +719,7 @@ class EwaldBreakup(object):
                 if (mag_r == 0.):
                     v_self += 0.
                 elif (mag_r > r_max):
-                    v_self += qs[i]*qs[i]/mag_r
+                    v_self += self.cofactor*qs[i]*qs[i]/mag_r
                 else:
                     v_self += qs[i]*qs[i]*v_r_spline(mag_r)
 
