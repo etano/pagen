@@ -9,9 +9,9 @@ def RhoCoul(r1,r2,theta,tau,xkappa,z,kmax,lmax,nmax,D):
     uklim = sqrt(float(kmax)/(tau*xkappa))
     rhocoul = 0.
     if D == 2:
-        rhocoul = integrate.romberg(CGrand2D, 0., 2.*uklim, args=(r1,r2,theta,tau,xkappa,z,lmax))
+        rhocoul = integrate.romberg(CGrand2D, 0., 2.*uklim, args=(r1,r2,theta,tau,xkappa,z,lmax),divmax=100)
     elif D == 3:
-        rhocoul = integrate.romberg(CGrand3D, 0., 2.*uklim, args=(r1,r2,theta,tau,xkappa,z,lmax))
+        rhocoul = integrate.romberg(CGrand3D, 0., 2.*uklim, args=(r1,r2,theta,tau,xkappa,z,lmax),divmax=100)
     if (z > 0.):
         return rhocoul
     else:
