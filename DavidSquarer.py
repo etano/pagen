@@ -18,8 +18,8 @@ def GenPotgenInput(prefix,type1,type2,lam1,lam2,Z1Z2,L,D,tau,grid_type,n_grid,r_
         n_temp = 8
     min_tau = tau
     max_tau = min_tau*(2**(n_temp-1))
-    if n_square < 14 + n_temp-1:
-        n_square = 14 + n_temp-1
+    if n_square < n_temp:
+        n_square = n_temp
 
     print 'Creating '+prefix+'.in'
     f = open(prefix+'.in','w')

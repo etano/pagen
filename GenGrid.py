@@ -7,13 +7,13 @@ def GenGrid(o):
     elif o['grid_type']=="LOG":
         rs = logspace(log10(o['r_min']),log10(o['r_max']),num=o['n_grid'],endpoint=True)
     elif o['grid_type']=="LOGLIN":
-        dr=(o['r_max']-o['r_paste'])/((o['n_grid']/2.)-1.)
+        dr=(o['r_max']-o['r_paste'])/(((o['n_grid']/2.)+1.)-1.)
         gdr=(o['r_paste']/o['r_min'])**(1./((o['n_grid']/2.)-1.))
-        for grid_i in range(o['n_grid']):
+        for grid_i in range(1,o['n_grid']+1):
             if(grid_i>o['n_grid']/2.):
-                rs.append(o['r_paste']+dr*(grid_i+1-(o['n_grid']/2.)))
+                rs.append(o['r_paste']+dr*(grid_i-(o['n_grid']/2.)))
             else:
-                rs.append(o['r_min']*gdr**(grid_i))
+                rs.append(o['r_min']*gdr**(grid_i-1.))
     elif o['grid_type']=="OPTIMIZED":
         rs = [o['r_min']]
         f0 = 0.

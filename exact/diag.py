@@ -6,8 +6,11 @@ import numpy as np
 
 def run(tau,xkappa,z,D):
     import Cusp
+    #du00 = Cusp.du00dBeta(tau,1./xkappa,z,D,1e-9)
+    #print 'du00', du00
+
     u00 = Cusp.u00(tau,1./xkappa,z,D,1e-9)
-    print 'u00', u00
+    print 0.0, u00
     
     kmax = 10
     lmax = 80
