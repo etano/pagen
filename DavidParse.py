@@ -2,18 +2,15 @@ import sys
 import os
 from numpy import *
 import h5py as h5
+from GenGrid import GenGrid
 
 def cds(group,name,data):
   a = zeros(1,float)
-  try:
-    if not data.dtype == a.dtype:
-      a = array(data)
-    else:
-      a = data
-  except:
+  if isinstance(data, basestring):
     a = array([data])
-  ds = group.create_dataset(name,a.shape,a.dtype)
-  ds[:] = data
+  else:
+    a = data
+  group.create_dataset(name,data=a)
 
 def check(s, sCheck):
   if(s != sCheck):
@@ -173,6 +170,12 @@ class Squarer2HDFParser:
     gridtype = self.next()
     start = float(self.next())
     end = float(self.next())
+    if (gridtype=="LOGLIN"):
+      r_paste = float(self.next())
+    else:
+      r_paste = 0.
+    grid_o = {'r_min':start,'r_max':end,'n_grid':numPts,'r_paste':r_paste,'grid_type':gridtype}
+    grid_points = GenGrid(grid_o)
     self.find("GRID")
     self.next()
     checkgrid = self.next()
@@ -213,6 +216,8 @@ class Squarer2HDFParser:
     cds(self.c,"type",gridtype)
     cds(self.c,"start",start)
     cds(self.c,"end",end)
+    cds(self.c,"r_paste",r_paste)
+    cds(self.c,"grid_points",grid_points)
     cds(self.b,"n_u_kj",n_u_kj)
     cds(self.b,"n_tau",n_tau)
     cds(self.b,"n_max",n_max)
@@ -235,6 +240,12 @@ class Squarer2HDFParser:
     gridtype = self.next()
     start = float(self.next())
     end = float(self.next())
+    if (gridtype=="LOGLIN"):
+      r_paste = float(self.next())
+    else:
+      r_paste = 0.
+    grid_o = {'r_min':start,'r_max':end,'n_grid':numPts,'r_paste':r_paste,'grid_type':gridtype}
+    grid_points = GenGrid(grid_o)
     self.find("GRID")
     self.next()
     checkgrid = self.next()
@@ -275,6 +286,8 @@ class Squarer2HDFParser:
     cds(self.c,"type",gridtype)
     cds(self.c,"start",start)
     cds(self.c,"end",end)
+    cds(self.c,"r_paste",r_paste)
+    cds(self.c,"grid_points",grid_points)
     cds(self.b,"n_u_kj",n_u_kj)
     cds(self.b,"n_tau",n_tau)
     cds(self.b,"n_max",n_max)
