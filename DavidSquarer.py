@@ -11,22 +11,22 @@ def GetUnique(a):
   seen = set()
   return [x for x in a if str(x) not in seen and not seen.add(str(x))]
 
-def GenPotgenInput(prefix,type1,type2,lam1,lam2,Z1Z2,L,D,tau,grid_type,n_grid,r_min,r_max,r_cut,k_cut,n_temp,n_square,breakup):
+def GenPotgenInput(prefix,type1,type2,lam1,lam2,Z1Z2,L,D,tau,grid_type,n_grid,r_min,r_max,r_cut,r_paste,k_cut,n_temp,n_square,breakup):
     # Determine temperatures
     if n_temp > 8:
         print 'WARNING: Max n_temp is 8!'
         n_temp = 8
     min_tau = tau
     max_tau = min_tau*(2**(n_temp-1))
-    if n_square < 14 + n_temp-1:
-        n_square = 14 + n_temp-1
+    if n_square < n_temp:
+        n_square = n_temp
 
     print 'Creating '+prefix+'.in'
     f = open(prefix+'.in','w')
     f.write(' UNITS H A')
     f.write('\n TYPE '+type1+' %f' % (lam1))
     f.write('\n TYPE '+type2+' %f' % (lam2))
-    f.write('\n GRID %i %s %f %f' % (n_grid,grid_type,r_min,r_max))
+    f.write('\n GRID %i %s %f %f %f' % (n_grid,grid_type,r_min,r_max,r_paste))
     f.write('\n SQUARER %f %i %i 3 30 %i' % (1./max_tau,n_temp,D,n_square))
     box_string = ' '.join([str(L) for i in range(D)])
     if breakup == 2:
@@ -114,7 +114,8 @@ def Breakup(pa_object):
     prefix = species_a['type']+'_'+species_b['type']
     GenPotgenInput(prefix+'_sq',type1,type2,lam1,lam2,Z1*Z2,
                    breakup['L'],breakup['n_d'],squarer['tau'],breakup['grid_type'],
-                   breakup['n_grid'],breakup['r_min'],breakup['r_max'],breakup['r_cut'],breakup['k_cut'],
+                   breakup['n_grid'],breakup['r_min'],breakup['r_max'],breakup['r_cut'],
+                   breakup['r_paste'],breakup['k_cut'],
                    squarer['n_temp'],squarer['n_square'],breakup_index)
 
     # Write potential
@@ -135,70 +136,7 @@ def Breakup(pa_object):
     [object_type,object_index,cofactor] = ['v',0,1.]
 
     # Do breakup
-    if 0:
-        if breakup['type'] != 'None':
-            if breakup['grid_type']=="LINEAR":
-                grid_index = 0
-            elif breakup['grid_type']=="LOG":
-                grid_index = 1
-            elif breakup['grid_type']=="OPTIMIZED":
-                grid_index = 2
-            else:
-                print 'Unrecognized grid:', breakup['grid_type']
-
-            subprocess.call([PAGEN_HOME+'/ewald/bin/ewald',str(breakup['L']),str(breakup['k_cut']),str(breakup['r_min']),str(breakup['r_cut']),str(breakup['n_grid']),str(grid_index),str(Z1*Z2),str(breakup_index),str(object_index),prefix,str(breakup['n_knots']),str(tau),str(breakup['n_images'])])
-
-            # Write .yk file
-            kData = loadtxt(prefix+'_sq_'+object_type+'_diag_k.dat')
-            ks = kData[:,0]
-            v_ks = kData[:,1]
-            f = open(prefix+'_sq.yk','w')
-            for [k,v_k] in zip(ks,v_ks):
-                f.write('  %.10E'%k+'       %.10E'%v_k+'\n')
-            f.close()
-        else:
-            f = open(prefix+'_sq_'+object_type+'_diag_r.dat','w')
-            rs = GenGrid(potential)
-            for r in rs:
-                f.write('%.10E %.10E\n' % (r,potential['function'](Z1,Z2,r)))
-            f.close()
-
-        # Write .dm and .in file for squarer
-        g = open(prefix+'_sq.dm','w')
-        f = open(prefix+'_sq.in','r')
-        for line in f:
-            g.write(line)
-        f.close()
-        if breakup['type'] != 'None':
-            g.write('\n VIMAGE ')
-            if (breakup['n_d'] == 2):
-                g.write(str(-3.90026492*Z1*Z2/breakup['L']))
-            elif (breakup['n_d'] == 3):
-                g.write(str(-2.837297479*Z1*Z2/breakup['L']))
-        g.write('\n POTTAIL 0.0')
-        g.write('\n RANK 2 '+str(breakup['n_grid'])+' 1')
-        if breakup['type'] != 'None':
-            g.write('\n GRID 1 '+breakup['grid_type']+' '+str(breakup['r_min'])+' '+str(breakup['r_cut']))
-        else:
-            g.write('\n GRID 1 '+breakup['grid_type']+' '+str(breakup['r_min'])+' '+str(breakup['r_max']))
-        g.write('\n LABEL 1 r')
-        g.write('\n BEGIN potential 0')
-        rData = loadtxt(prefix+'_sq_'+object_type+'_diag_r.dat')
-        count = 0
-        g.write('\n  ')
-        for [r,v] in rData:
-            if r != 0.:
-                if breakup['type'] != 'None':
-                    g.write('%.10E'%(potential['function'](Z1,Z2,r) - v)+'  ')
-                else:
-                    g.write('%.10E'%(v)+'  ')
-                count += 1
-                if count % 5 == 0:
-                    g.write('\n  ')
-        g.write('\n')
-        g.close()
+    if breakup['type'] != 'None':
+        subprocess.call([PAGEN_HOME+'/davidSquarer/sqdir/potgen_lr',prefix+'_sq'])
     else:
-        if breakup['type'] != 'None':
-            subprocess.call([PAGEN_HOME+'/davidSquarer/sqdir/potgen_lr',prefix+'_sq'])
-        else:
-            subprocess.call([PAGEN_HOME+'/davidSquarer/sqdir/potgen_sr',prefix+'_sq'])
+        subprocess.call([PAGEN_HOME+'/davidSquarer/sqdir/potgen_sr',prefix+'_sq'])

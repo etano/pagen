@@ -1,3 +1,8 @@
+# Pollock, E. L., Comp. Phys. Comm. 52 , 49 (1988).
+# http://www.sciencedirect.com/science/article/pii/0010465588901713
+
+import sys
+import os
 from scipy.misc import factorial, comb
 from scipy.special import zeta, gamma
 from math import pi, sqrt
@@ -46,7 +51,7 @@ def u00(tau, lam, Z1Z2, D, tol):
     g = gam(tau, lam, Z1Z2)
     P = GetPs(nOrder, D)
     #for p in P:
-    #    print abs(p)
+    #    print p
     u = 0.
     oldu = 1.e100
     for j in range(1,len(P)+1):
@@ -66,5 +71,33 @@ def du00dBeta(tau, lam, Z1Z2, D, tol):
     nOrder = 50
     return (u00(tau+dtau,lam,Z1Z2,D,tol) - u00(tau,lam,Z1Z2,D,tol))/dtau
 
-print u00(0.125,0.5,1.0,3,1e-5)
-print du00dBeta(0.125,0.5,1.0,3,1e-4)
+def usage():
+    print "Usage: %s tau lam1 lam2 Z1Z2 D" % os.path.basename(sys.argv[0])
+    sys.exit(2)
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    if "-h" in argv or "--help" in argv:
+        usage()
+
+    try:
+        tau = float(sys.argv[1])
+        lam1 = float(sys.argv[2])
+        lam2 = float(sys.argv[3])
+        Z1Z2 = float(sys.argv[4])
+        D = int(sys.argv[5])
+        lam = lam1*lam2/(lam1 + lam2)
+        m1 = 1./(2.*lam1)
+        m2 = 1./(2.*lam2)
+        m12 = m1*m2/(m1+m2)
+        lam12 = 1./(2.*m12)
+        xkappa = lam12
+        z = Z1Z2/xkappa
+        print u00(tau,1/xkappa,z,D,1e-6)
+        print du00dBeta(tau,1./xkappa,z,D,1e-4)
+    except:
+        usage()
+
+if __name__ == "__main__":
+    sys.exit(main())
