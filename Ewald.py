@@ -386,7 +386,7 @@ class EwaldBreakup(object):
         n_r = basis.GetNElements()
 
         # Determine r max from tolerances
-        v_tol = 1.e-5 # TODO: This is fixed
+        v_tol = 1.e-4 # TODO: This is fixed
         v_c = self.cofactor*self.z_1_z_2/r_max
         if (abs(v_r_spline(r_max) - v_c) > v_tol):
             print 'WARNING: |v(r_max) - v_{c}(r_max)| = ',abs(v_r_spline(r_max) - v_c),'>',v_tol,'with r_max =',r_max,' v(r_max) = ',v_r_spline(r_max),' v_{c}(r_max) = ',v_c
