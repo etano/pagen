@@ -4,6 +4,7 @@ import subprocess
 import FitPA
 from FixTail import FixTail
 from GenGrid import GenGrid
+import Ewald
 import h5py as h5
 import os, sys
 
@@ -53,20 +54,28 @@ def Breakup(pa_object):
     f.close()
 
     # Perform breakup
-    [object_type,object_index,cofactor] = ['v',0,1.]
-    print '****\n', '****', object_type, '\n****'
-    if breakup['type'] != 'None':
-        if breakup['grid_type']=="LINEAR":
-            grid_index = 0
-        elif breakup['grid_type']=="LOG":
-            grid_index = 1
-        elif breakup['grid_type']=="OPTIMIZED":
-            grid_index = 2
+    for [object_type,object_index,cofactor] in [['v',0,1.]]:
+        print '****\n', '****', object_type, '\n****'
+
+        # Fix tail
+        subprocess.call(['cp','-n',prefix+'_sq_'+object_type+'_diag.dat',prefix+'_sq_'+object_type+'_diag_orig.dat']) # Backup original
+        subprocess.call(['cp',prefix+'_sq_'+object_type+'_diag_orig.dat',prefix+'_sq_'+object_type+'_diag.dat']) # Replace with original
+        if object_type != 'v' and breakup['type'] != 'StandardEwald':
+            n_points_to_fit = 10 # number of points to fit the tail with
+            asymptote = lambda r: cofactor*potential['function'](Z1,Z2,r)
+            try:
+                FixTail(prefix+'_sq_'+object_type+'_diag.dat',n_points_to_fit,asymptote)
+            except:
+                break
+
+        # Do breakup
+        if breakup['type'] != 'None':
+            if object_type == 'u':
+                Ewald.run(breakup,object_type,prefix,Z1*Z2,tau)
+            else:
+                Ewald.run(breakup,object_type,prefix,Z1*Z2,1.)
         else:
-            print 'Unrecognized grid:', breakup['grid_type']
-        subprocess.call([PAGEN_HOME+'/ewald/bin/ewald',str(breakup['L']),str(breakup['k_cut']),str(breakup['r_min']),str(breakup['r_cut']),str(breakup['n_grid']),str(grid_index),str(Z1*Z2),str(breakup_index),str(object_index),prefix,str(breakup['n_knots']),str(tau),str(breakup['n_images'])])
-    else:
-        subprocess.call(['cp',prefix+'_sq_'+object_type+'_diag.dat',prefix+'_sq_'+object_type+'_diag_r.dat'])
+            subprocess.call(['cp',prefix+'_sq_'+object_type+'_diag.dat',prefix+'_sq_'+object_type+'_diag_r.dat'])
 
     # Write to h5 file
     f = h5.File(prefix+'.h5','w')
@@ -80,25 +89,40 @@ def Breakup(pa_object):
     info.create_dataset('Z1',data=[Z1])
     info.create_dataset('Z2',data=[Z2])
     info.create_dataset('tau',data=[tau])
+    for [object_type,cofactor] in [['v',1]]:
+        pa_group = f.create_group(object_type)
 
-    # Write out diagonal PA
-    pa_group = f.create_group(object_type)
-    pa_subgroup = pa_group.create_group('diag')
-    pa_array = loadtxt(prefix+'_sq_'+object_type+'_diag.dat', comments='#')
-    pa_subgroup.create_dataset('r',data=pa_array[:,0])
-    pa_subgroup.create_dataset('n_r',data=len(pa_array[:,0]))
-    pa_subgroup.create_dataset(object_type+'_r',data=pa_array[:,1])
-    if breakup['type'] != 'None':
-        pa_array = loadtxt(prefix+'_sq_'+object_type+'_diag_r.dat', comments='#')
-        pa_subgroup.create_dataset(object_type+'_long_r_0',data=[pa_array[0,1]])
-        pa_subgroup.create_dataset('r_long',data=pa_array[1:,0])
-        pa_subgroup.create_dataset('n_r_long',data=len(pa_array[1:,0]))
-        pa_subgroup.create_dataset(object_type+'_long_r',data=pa_array[1:,1])
-        pa_array = loadtxt(prefix+'_sq_'+object_type+'_diag_k.dat', comments='#')
-        pa_subgroup.create_dataset(object_type+'_long_k_0',data=[pa_array[0,1]])
-        pa_subgroup.create_dataset('k',data=pa_array[:,0])
-        pa_subgroup.create_dataset('n_k',data=len(pa_array[:,0]))
-        pa_subgroup.create_dataset(object_type+'_long_k',data=pa_array[:,1])
+        # Write out diagonal PA
+        pa_subgroup = pa_group.create_group('diag')
+        pa_array = loadtxt(prefix+'_sq_'+object_type+'_diag.dat', comments='#')
+        pa_subgroup.create_dataset('r',data=pa_array[:,0])
+        pa_subgroup.create_dataset('n_r',data=len(pa_array[:,0]))
+        pa_subgroup.create_dataset(object_type+'_r',data=pa_array[:,1])
+        if breakup['type'] != 'None':
+            pa_array = loadtxt(prefix+'_sq_'+object_type+'_diag_r.dat', comments='#')
+            pa_subgroup.create_dataset(object_type+'_long_r_0',data=[pa_array[0,1]])
+            pa_subgroup.create_dataset('r_long',data=pa_array[1:,0])
+            pa_subgroup.create_dataset('n_r_long',data=len(pa_array[1:,0]))
+            pa_subgroup.create_dataset(object_type+'_long_r',data=pa_array[1:,1])
+            pa_array = loadtxt(prefix+'_sq_'+object_type+'_diag_k.dat', comments='#')
+            pa_subgroup.create_dataset(object_type+'_long_k_0',data=[pa_array[0,1]])
+            pa_subgroup.create_dataset('k',data=pa_array[:,0])
+            pa_subgroup.create_dataset('n_k',data=len(pa_array[:,0]))
+            pa_subgroup.create_dataset(object_type+'_long_k',data=pa_array[:,1])
+
+        # Write out off diagonal PA
+        if object_type != 'v':
+            pa_subgroup = pa_group.create_group('off_diag')
+            pa_array = loadtxt(prefix+'_sq_'+object_type+'_offdiag.dat', comments='#')
+            xs = unique(pa_array[:,0])
+            ys = unique(pa_array[:,1])
+            zs = pa_array[:,2].reshape((len(xs),len(ys)))
+            pa_subgroup.create_dataset('x',data=xs)
+            pa_subgroup.create_dataset('n_x',data=len(xs))
+            pa_subgroup.create_dataset('y',data=ys)
+            pa_subgroup.create_dataset('n_y',data=len(ys))
+            pa_subgroup.create_dataset(object_type+'_xy',data=zs)
+
     f.flush()
     f.close()
 

@@ -1,5 +1,5 @@
 import sys, os
-from math import pi, ceil, floor, erf, cos, sin
+from math import pi, ceil, floor, erf, erfc, cos, sin
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline as spline
 from scipy.integrate import romberg as integrate
@@ -295,18 +295,18 @@ class EwaldBreakup(object):
 
         # Long range k space potential part
         f = open(self.prefix+'_sq_'+self.object_string+'_diag_k.dat','w')
-        if (self.n_d == 2): # FIXME: Check this is correct
-            f_v_s_0 = -2.*self.cofactor*np.sqrt(pi)*self.z_1_z_2/(alpha*self.vol)
+        if (self.n_d == 2):
+            f_v_s_0 = -2.*np.sqrt(pi)*self.cofactor*self.z_1_z_2/(alpha*self.vol)
         elif (self.n_d == 3):
-            f_v_s_0 = -4.*self.cofactor*pi*self.z_1_z_2/(4.*alpha*alpha*self.vol)
+            f_v_s_0 = -4.*pi*self.cofactor*self.z_1_z_2/(4.*alpha*alpha*self.vol)
         f.write('%.10E %.10E\n'%(0.,f_v_s_0))
         f_v_ls = []
         for k in self.ks:
             k_2 = np.dot(k,k)
             mag_k = np.sqrt(k_2)
             f_v_l = 0.
-            if (self.n_d == 2): #FIXME: Check this is correct
-                f_v_l = (2.*self.cofactor*np.sqrt(pi)*self.z_1_z_2/(mag_k*self.vol))*exp(-k_2/(4.*alpha*alpha))
+            if (self.n_d == 2):
+                f_v_l = (2.*pi*self.cofactor*self.z_1_z_2/(mag_k*self.vol))*erfc(mag_k/(2.*alpha))
             elif (self.n_d == 3):
                 f_v_l = (4.*pi*self.cofactor*self.z_1_z_2/(k_2*self.vol))*exp(-k_2/(4.*alpha*alpha))
             f_v_ls.append([mag_k, f_v_l])
@@ -601,17 +601,24 @@ class EwaldBreakup(object):
 
         # Set up test system
         half_L = self.L/2.
-        N = 8
         xs = []
-        xs.append(np.array([0,0,0]))
-        xs.append(np.array([half_L,half_L,0]))
-        xs.append(np.array([half_L,0,half_L]))
-        xs.append(np.array([0,half_L,half_L]))
-        xs.append(np.array([half_L,0,0]))
-        xs.append(np.array([0,half_L,0]))
-        xs.append(np.array([0,0,half_L]))
-        xs.append(np.array([half_L,half_L,half_L]))
-        qs = np.array([1.,1.,1.,1.,-1.,-1.,-1.,-1.])
+        if self.n_d == 3:
+            xs.append(np.array([0,0,0]))
+            xs.append(np.array([half_L,half_L,0]))
+            xs.append(np.array([half_L,0,half_L]))
+            xs.append(np.array([0,half_L,half_L]))
+            xs.append(np.array([half_L,0,0]))
+            xs.append(np.array([0,half_L,0]))
+            xs.append(np.array([0,0,half_L]))
+            xs.append(np.array([half_L,half_L,half_L]))
+            qs = np.array([1.,1.,1.,1.,-1.,-1.,-1.,-1.])
+        elif self.n_d == 2:
+            xs.append(np.array([0,0]))
+            xs.append(np.array([half_L,half_L]))
+            xs.append(np.array([half_L,0]))
+            xs.append(np.array([0,half_L]))
+            qs = np.array([1.,1.,-1.,-1.])
+        N = len(xs)
 
         # Compute short ranged part
         v_s = 0.
@@ -672,17 +679,24 @@ class EwaldBreakup(object):
 
         # Set up test system
         half_L = self.L/2.
-        N = 8
         xs = []
-        xs.append(np.array([0,0,0]))
-        xs.append(np.array([half_L,half_L,0]))
-        xs.append(np.array([half_L,0,half_L]))
-        xs.append(np.array([0,half_L,half_L]))
-        xs.append(np.array([half_L,0,0]))
-        xs.append(np.array([0,half_L,0]))
-        xs.append(np.array([0,0,half_L]))
-        xs.append(np.array([half_L,half_L,half_L]))
-        qs = np.array([1.,1.,1.,1.,-1.,-1.,-1.,-1.])
+        if self.n_d == 3:
+            xs.append(np.array([0,0,0]))
+            xs.append(np.array([half_L,half_L,0]))
+            xs.append(np.array([half_L,0,half_L]))
+            xs.append(np.array([0,half_L,half_L]))
+            xs.append(np.array([half_L,0,0]))
+            xs.append(np.array([0,half_L,0]))
+            xs.append(np.array([0,0,half_L]))
+            xs.append(np.array([half_L,half_L,half_L]))
+            qs = np.array([1.,1.,1.,1.,-1.,-1.,-1.,-1.])
+        elif self.n_d == 2:
+            xs.append(np.array([0,0]))
+            xs.append(np.array([half_L,half_L]))
+            xs.append(np.array([half_L,0]))
+            xs.append(np.array([0,half_L]))
+            qs = np.array([1.,1.,-1.,-1.])
+        N = len(xs)
 
         # Compose images
         n_is = []
@@ -727,8 +741,11 @@ class EwaldBreakup(object):
         print self.box[0]*(v_s + 0.5*v_self)/N
 
     def ComputeMadelungExact(self):
-        print 'Computing Madelung constant exactly (bare 3D Coulomb only)...'
-        print '-1.747564594633182190636212035544397403481'
+        print 'Computing Madelung constant exactly (bare Coulomb only)...'
+        if self.n_d == 3:
+            print '-1.747564594633182190636212035544397403481'
+        elif self.n_d == 2:
+            print '-1.61554'
 
 def run(settings,object_type,prefix,z_1_z_2,cofactor):
     # Set up system

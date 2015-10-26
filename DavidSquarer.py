@@ -11,7 +11,7 @@ def GetUnique(a):
   seen = set()
   return [x for x in a if str(x) not in seen and not seen.add(str(x))]
 
-def GenPotgenInput(prefix,type1,type2,lam1,lam2,Z1Z2,L,D,tau,grid_type,n_grid,r_min,r_max,r_cut,r_paste,k_cut,n_temp,n_square,breakup):
+def GenPotgenInput(prefix,type1,type2,lam1,lam2,Z1Z2,L,D,tau,grid_type,n_grid,r_min,r_max,r_cut,r_paste,k_cut,n_temp,n_square,breakup,n_knots,n_order):
     # Determine temperatures
     if n_temp > 8:
         print 'WARNING: Max n_temp is 8!'
@@ -27,7 +27,7 @@ def GenPotgenInput(prefix,type1,type2,lam1,lam2,Z1Z2,L,D,tau,grid_type,n_grid,r_
     f.write('\n TYPE '+type1+' %f' % (lam1))
     f.write('\n TYPE '+type2+' %f' % (lam2))
     f.write('\n GRID %i %s %f %f %f' % (n_grid,grid_type,r_min,r_max,r_paste))
-    f.write('\n SQUARER %f %i %i 3 30 %i' % (1./max_tau,n_temp,D,n_square))
+    f.write('\n SQUARER %f %i %i %i %i %i' % (1./max_tau,n_temp,D,n_order,n_knots,n_square))
     box_string = ' '.join([str(L) for i in range(D)])
     if breakup == 2:
         f.write('\n POT COUL %f %f 0.D0' % (r_cut,Z1Z2))
@@ -116,7 +116,7 @@ def Breakup(pa_object):
                    breakup['L'],breakup['n_d'],squarer['tau'],breakup['grid_type'],
                    breakup['n_grid'],breakup['r_min'],breakup['r_max'],breakup['r_cut'],
                    breakup['r_paste'],breakup['k_cut'],
-                   squarer['n_temp'],squarer['n_square'],breakup_index)
+                   squarer['n_temp'],squarer['n_square'],breakup_index,breakup['n_knots'],squarer['n_order'])
 
     # Write potential
     f = open(prefix+'_sq_v_diag.dat','w')
