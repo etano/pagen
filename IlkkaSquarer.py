@@ -46,6 +46,10 @@ def Square(pa_object):
     subprocess.call(['cp','us.1.txt',prefix+'_sq_u_offdiag.dat'])
     subprocess.call(['cp','dud.1.txt',prefix+'_sq_du_diag.dat'])
     subprocess.call(['cp','dus.1.txt',prefix+'_sq_du_offdiag.dat'])
+    subprocess.call(['rm','ud.1.txt'])
+    subprocess.call(['rm','us.1.txt'])
+    subprocess.call(['rm','dud.1.txt'])
+    subprocess.call(['rm','dus.1.txt'])
 
 def Breakup(pa_object):
     species_a = pa_object['species_a']
